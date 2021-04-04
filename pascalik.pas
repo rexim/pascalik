@@ -59,6 +59,32 @@ begin
             World_Set(World, Row, Col, Cell);
 end;
 
+procedure World_Place_Room(var World: TWorld; Row, Col, Height, Width: Integer);
+begin
+    {Floor}
+    World_Fill_Rect(World, Row + 1, Col + 1, Row + Height - 2, Col + Width - 2, Floor);
+
+    {Wall Frame}
+    World_Fill_Rect(World, Row, Col, Row + Height - 1, Col, VertWall);
+    World_Fill_Rect(World, Row, Col + Width - 1, Row + Height - 1, Col + Width - 1, VertWall);
+    World_Fill_Rect(World, Row, Col, Row, Col + Width - 1, HorzWall);
+    World_Fill_Rect(World, Row + Height - 1, Col, Row + Height - 1, Col + Width - 1, HorzWall);
+end;
+
+procedure World_Spawn_Player(var World: TWorld);
+var
+    Row, Col: Integer;
+begin
+    for Row := 0 to World.Rows - 1 do
+        for Col := 0 to World.Cols - 1 do
+            if Walkable[World_Get(World, Row, Col)] then
+            begin
+                World.Player_Row := Row;
+                World.Player_Col := Col;
+                Exit;
+            end;
+end;
+
 procedure World_Render(World: TWorld);
 var
     Row, Col: Integer;
@@ -99,7 +125,8 @@ var
     Command : Char;
 begin
     World := Create_World(ROWS, COLS, Empty);
-    World_Fill_Rect(World, 0, 0, 5, 5, Floor);
+    World_Place_Room(World, 3, 3, 5, 5);
+    World_Spawn_Player(World);
 
     World_Render(World);
     while not Quit do
