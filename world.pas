@@ -2,8 +2,6 @@ unit world;
 
 interface
 
-uses Geometry;
-
 type
     TCell = (Empty, Floor, VertWall, HorzWall, Door, Passage);
     TDir = (Up, Down, Right, Left);
@@ -19,7 +17,7 @@ type
     function Create_World(Rows, Cols: Integer; Cell: TCell): TWorld;
     function World_Get(World: TWorld; Row, Col: Integer): TCell;
     procedure World_Set(var World: TWorld; Row, Col: Integer; Cell: TCell);
-    procedure World_Fill_Rect(var World: TWorld; Rect: TRect; Cell: TCell);
+    procedure World_Fill_Rect(var World: TWorld; Row1, Col1, Row2, Col2: Integer; Cell: TCell);
 
     procedure World_Render(World: TWorld);
     procedure World_Move_Player(var World: TWorld; Dir: TDir);
@@ -32,6 +30,11 @@ const
 
 implementation
     uses Math;
+
+    function Modulo(A: Integer; B: Integer): Integer;
+    begin
+        Modulo := ((A mod B) + B) mod B;
+    end;
 
     function Create_World(Rows, Cols: Integer; Cell: TCell): TWorld;
     var
@@ -60,13 +63,13 @@ implementation
         World.Cells[Modulo(Row, World.Rows) * World.Cols + Modulo(Col, World.Cols)] := Cell;
     end;
 
-    procedure World_Fill_Rect(var World: TWorld; Rect: TRect; Cell: TCell);
+    procedure World_Fill_Rect(var World: TWorld; Row1, Col1, Row2, Col2: Integer; Cell: TCell);
     var
         Row, Col : Integer;
     begin
-        for Row := Min(Rect.Point1.Row, Rect.Point2.Row) to Max(Rect.Point1.Row, Rect.Point2.Row) do
+        for Row := Min(Row1, Row2) to Max(Row1, Row2) do
         begin
-            for Col := Min(Rect.Point1.Col, Rect.Point2.Col) to Max(Rect.Point1.Col, Rect.Point2.Col)do
+            for Col := Min(Col1, Col2) to Max(Col1, Col2)do
             begin
                 World_Set(World, Row, Col, Cell);
             end;

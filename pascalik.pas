@@ -1,7 +1,7 @@
 program Pascalik;
 
 uses
-    Geometry, World;
+    World;
 
 const
     ROWS: Integer = 10;
@@ -14,7 +14,7 @@ var
     Command : Char;
 begin
     W := Create_World(ROWS, COLS, Empty);
-    World_Fill_Rect(W, Make_Rect(Make_Point(0, 0), Make_Point(5, 5)), Floor);
+    World_Fill_Rect(W, 0, 0, 5, 5, Floor);
 
     World_Render(W);
     while not Quit do
