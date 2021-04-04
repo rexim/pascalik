@@ -34,9 +34,7 @@ begin
     Result.Cols := Cols;
     SetLength(Result.Cells, Rows * Cols);
     for Index := 0 to Rows * Cols - 1 do
-    begin
         Result.Cells[Index] := Cell;
-    end;
     Result.Player_Row := 0;
     Result.Player_Col := 0;
     Create_World := Result
@@ -57,12 +55,8 @@ var
     Row, Col : Integer;
 begin
     for Row := Min(Row1, Row2) to Max(Row1, Row2) do
-    begin
         for Col := Min(Col1, Col2) to Max(Col1, Col2)do
-        begin
             World_Set(World, Row, Col, Cell);
-        end;
-    end;
 end;
 
 procedure World_Render(World: TWorld);
@@ -72,12 +66,10 @@ begin
     for Row := 0 to World.Rows - 1 do
     begin
         for Col := 0 to World.Cols - 1 do
-        begin
             if (Row = World.Player_Row) and (Col = World.Player_Col) then
                 Write('@')
             else
                 Write(Cell_To_Char[World_Get(World, Row, Col)]);
-        end;
         WriteLn();
     end;
 end;
@@ -115,7 +107,6 @@ begin
         Write('> ');
         ReadLn(Commands);
         for Command in Commands do
-        begin
             case Command of
             'w': World_Move_Player(World, Up);
             's': World_Move_Player(World, Down);
@@ -123,7 +114,6 @@ begin
             'd': World_Move_Player(World, Right);
             'q': Quit := True;
             end;
-        end;
         World_Render(World);
     end;
 end.
