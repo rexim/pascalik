@@ -55,7 +55,7 @@ var
     Row, Col : Integer;
 begin
     for Row := Min(Row1, Row2) to Max(Row1, Row2) do
-        for Col := Min(Col1, Col2) to Max(Col1, Col2)do
+        for Col := Min(Col1, Col2) to Max(Col1, Col2) do
             World_Set(World, Row, Col, Cell);
 end;
 
@@ -69,6 +69,32 @@ begin
     World_Fill_Rect(World, Row, Col + Width - 1, Row + Height - 1, Col + Width - 1, VertWall);
     World_Fill_Rect(World, Row, Col, Row, Col + Width - 1, HorzWall);
     World_Fill_Rect(World, Row + Height - 1, Col, Row + Height - 1, Col + Width - 1, HorzWall);
+end;
+
+procedure World_Passage_Walk(var World: TWorld; var Row, Col: Integer; Dir: TDir; Len: Integer);
+var
+    Next_Row, Next_Col : Integer;
+begin
+    Next_Row := Row + Row_Offset[Dir] * Len;
+    Next_Col := Col + Col_Offset[Dir] * Len;
+    World_Fill_Rect(World, Row, Col, Next_Row, Next_Col, Passage);
+    Row := Next_Row;
+    Col := Next_Col;
+end;
+
+procedure World_Generate(var World: TWorld);
+var
+    Row, Col: Integer;
+begin
+    World_Place_Room(World, 0, 0, 5, 5);
+
+    Row := 3;
+    Col := 4;
+    World_Passage_Walk(World, Row, Col, Right, 3);
+    World_Set(World, 3, 4, Door);
+    World_Passage_Walk(World, Row, Col, Down, 3);
+    World_Place_Room(World, Row, Col - 1, 4, 4);
+    World_Set(World, Row, Col, Door);
 end;
 
 procedure World_Spawn_Player(var World: TWorld);
@@ -116,7 +142,7 @@ end;
 
 const
     ROWS: Integer = 10;
-    COLS: Integer = 10;
+    COLS: Integer = 20;
 
 var
     World: TWorld;
@@ -125,7 +151,7 @@ var
     Command : Char;
 begin
     World := Create_World(ROWS, COLS, Empty);
-    World_Place_Room(World, 3, 3, 5, 5);
+    World_Generate(World);
     World_Spawn_Player(World);
 
     World_Render(World);
