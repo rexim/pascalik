@@ -1,14 +1,13 @@
 program Pascalik;
 
 uses
-    Geometry, Display, World;
+    Geometry, World;
 
 const
     ROWS: Integer = 10;
     COLS: Integer = 10;
 
 var
-    D: TDisplay;
     W: TWorld;
     Quit: Boolean = False;
     Commands : String;
@@ -17,10 +16,7 @@ begin
     W := Create_World(ROWS, COLS, Empty);
     World_Fill_Rect(W, Make_Rect(Make_Point(0, 0), Make_Point(5, 5)), Floor);
 
-    D := Create_Display(ROWS, COLS, ' ');
-
-    World_Render(W, D);
-    Print_Display(D);
+    World_Render(W);
     while not Quit do
     begin
         Write('> ');
@@ -35,7 +31,6 @@ begin
             'q': Quit := True;
             end;
         end;
-        World_Render(W, D);
-        Print_Display(D);
+        World_Render(W);
     end;
 end.

@@ -2,7 +2,7 @@ unit world;
 
 interface
 
-uses Geometry, Display;
+uses Geometry;
 
 type
     TCell = (Empty, Floor, VertWall, HorzWall, Door, Passage);
@@ -20,7 +20,7 @@ type
     procedure World_Set(var World: TWorld; Point: TPoint; Cell: TCell);
     procedure World_Fill_Rect(var World: TWorld; Rect: TRect; Cell: TCell);
 
-    procedure World_Render(World: TWorld; var Display: TDisplay);
+    procedure World_Render(World: TWorld);
     procedure World_Move_Player(var World: TWorld; Dir: TDir);
 
 const
@@ -75,7 +75,7 @@ implementation
         end;
     end;
 
-    procedure World_Render(World: TWorld; var Display: TDisplay);
+    procedure World_Render(World: TWorld);
     var
         Row, Col: Integer;
     begin
@@ -83,14 +83,13 @@ implementation
         begin
             for Col := 0 to World.Cols - 1 do
             begin
-                if (Row < Display.Rows) and (Col < Display.Cols) then
-                begin
-                    Display_Set(Display, Make_Point(Row, Col), Cell_To_Char[World_Get(World, Make_Point(Row, Col))]);
-                end;
+                if (Row = World.Player_Pos.Row) and (Col = World.Player_Pos.Col) then
+                    Write('@')
+                else
+                    Write(Cell_To_Char[World_Get(World, Make_Point(Row, Col))]);
             end;
+            WriteLn();
         end;
-
-        Display_Set(Display, World.Player_Pos, '@');
     end;
 
     procedure World_Move_Player(var World: TWorld; Dir: TDir);
