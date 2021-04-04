@@ -1,5 +1,4 @@
 program Pascalik;
-
 uses Math;
 
 type
@@ -114,14 +113,13 @@ begin
         World.Cells[Index] := Empty;
 
     {Generating Rooms}
-    World_Place_Room(World, 0, 0, 5, 5);
     Row := 3;
     Col := 4;
-    World_Passage_Walk(World, Row, Col, Right, 3);
-    World_Set(World, 3, 4, Door);
-    World_Passage_Walk(World, Row, Col, Down, 3);
-    World_Place_Room(World, Row, Col - 1, 4, 4);
-    World_Set(World, Row, Col, Door);
+    for Index := 1 to 1000 do
+        World_Passage_Walk(
+            World, Row, Col,
+            TDir(Random(Ord(High(TDir)) - Ord(Low(TDir)) + 1)),
+            Random(2) + 2);
 
     {Spawn Player}
     World_Spawn_Player(World);
@@ -144,14 +142,20 @@ begin
     Exit(False);
 end;
 
-procedure World_Render(World: TWorld);
+procedure World_Render(World: TWorld; Camera_Rows, Camera_Cols: Integer);
 var
     Row, Col: Integer;
     Item_Index: Integer;
+    Cam_Row1, Cam_Col1, Cam_Row2, Cam_Col2: Integer;
 begin
-    for Row := 0 to World.Rows - 1 do
+    Cam_Row1 := Max(0, World.Player_Row - Camera_Rows div 2);
+    Cam_Col1 := Max(0, World.Player_Col - Camera_Cols div 2);
+    Cam_Row2 := Min(World.Rows - 1, Cam_Row1 + Camera_Rows - 1);
+    Cam_Col2 := Min(World.Cols - 1, Cam_Col1 + Camera_Cols - 1);
+
+    for Row := Cam_Row1 to Cam_Row2 do
     begin
-        for Col := 0 to World.Cols - 1 do
+        for Col := Cam_Col1 to Cam_Col2 do
             if (Row = World.Player_Row) and (Col = World.Player_Col) then
                 Write('@')
             else if World_Item_At(World, Row, Col, Item_Index) then
@@ -170,6 +174,9 @@ var
 begin
     New_Row := World.Player_Row + Row_Offset[Dir];
     New_Col := World.Player_Col + Col_Offset[Dir];
+
+    if (0 <= New_Row) and (New_Row < World.Rows) then
+    if (0 <= New_Col) and (New_Col < World.Cols) then
     if Walkable[World_Get(World, New_Row, New_Col)] then
     begin
         World.Player_Row := New_Row;
@@ -188,8 +195,10 @@ begin
 end;
 
 const
-    ROWS: Integer = 10;
-    COLS: Integer = 20;
+    ROWS: Integer = 100;
+    COLS: Integer = 200;
+    CAMERA_ROWS: Integer = 10;
+    CAMERA_COLS: Integer = 20;
 
 var
     World: TWorld;
@@ -197,9 +206,10 @@ var
     Commands : String;
     Command : Char;
 begin
+    Randomize;
     World_Generate(World, ROWS, COLS);
 
-    World_Render(World);
+    World_Render(World, CAMERA_ROWS, CAMERA_COLS);
     while not Quit do
     begin
         Write('> ');
@@ -212,6 +222,6 @@ begin
             'd': World_Move_Player(World, Right);
             'q': Quit := True;
             end;
-        World_Render(World);
+        World_Render(World, CAMERA_ROWS, CAMERA_COLS);
     end;
 end.
