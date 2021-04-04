@@ -6,15 +6,25 @@ type
     TCell = (Empty, Floor, VertWall, HorzWall, Door, Passage);
     TDir = (Up, Down, Right, Left);
 
+    TItemKind = (Nothing, Gold, Health);
+    TItem = record
+        Row, Col : Integer;
+        case Kind : TItemKind of
+        Gold: (Amount: Integer)
+    end;
+
     TWorld = record
-        Rows       : Integer;
-        Cols       : Integer;
-        Cells      : Array of TCell;
-        Player_Row : Integer;
-        Player_Col : Integer;
+        Rows        : Integer;
+        Cols        : Integer;
+        Cells       : Array of TCell;
+        Items       : Array of TItem;
+        Player_Row  : Integer;
+        Player_Col  : Integer;
+        Player_Gold : Integer;
     end;
 
 const
+    Item_To_Char: array[TItemKind] of Char = ('?', '*', '&');
     Cell_To_Char: array[TCell] of Char = (' ', '.', '|', '-', '+', '#');
     Row_Offset: array[TDir] of Integer = (-1, 1, 0, 0);
     Col_Offset: array[TDir] of Integer = (0, 0, 1, -1);
@@ -25,19 +35,15 @@ begin
     Modulo := ((A mod B) + B) mod B;
 end;
 
-function Create_World(Rows, Cols: Integer; Cell: TCell): TWorld;
+function Make_Gold(Row, Col, Amount: Integer): TItem;
 var
-    Index : Integer;
-    Result : TWorld;
+    Result: TItem;
 begin
-    Result.Rows := Rows;
-    Result.Cols := Cols;
-    SetLength(Result.Cells, Rows * Cols);
-    for Index := 0 to Rows * Cols - 1 do
-        Result.Cells[Index] := Cell;
-    Result.Player_Row := 0;
-    Result.Player_Col := 0;
-    Create_World := Result
+    Result.Kind := Gold;
+    Result.Row := Row;
+    Result.Col := Col;
+    Result.Amount := Amount;
+    Make_Gold := Result;
 end;
 
 function World_Get(World: TWorld; Row, Col: Integer): TCell;
@@ -82,21 +88,6 @@ begin
     Col := Next_Col;
 end;
 
-procedure World_Generate(var World: TWorld);
-var
-    Row, Col: Integer;
-begin
-    World_Place_Room(World, 0, 0, 5, 5);
-
-    Row := 3;
-    Col := 4;
-    World_Passage_Walk(World, Row, Col, Right, 3);
-    World_Set(World, 3, 4, Door);
-    World_Passage_Walk(World, Row, Col, Down, 3);
-    World_Place_Room(World, Row, Col - 1, 4, 4);
-    World_Set(World, Row, Col, Door);
-end;
-
 procedure World_Spawn_Player(var World: TWorld);
 var
     Row, Col: Integer;
@@ -111,24 +102,71 @@ begin
             end;
 end;
 
+procedure World_Generate(var World: TWorld; Rows, Cols: Integer);
+var
+    Index, Row, Col: Integer;
+begin
+    {Resizing Cells}
+    World.Rows := Rows;
+    World.Cols := Cols;
+    SetLength(World.Cells, Rows * Cols);
+    for Index := 0 to Rows * Cols - 1 do
+        World.Cells[Index] := Empty;
+
+    {Generating Rooms}
+    World_Place_Room(World, 0, 0, 5, 5);
+    Row := 3;
+    Col := 4;
+    World_Passage_Walk(World, Row, Col, Right, 3);
+    World_Set(World, 3, 4, Door);
+    World_Passage_Walk(World, Row, Col, Down, 3);
+    World_Place_Room(World, Row, Col - 1, 4, 4);
+    World_Set(World, Row, Col, Door);
+
+    {Spawn Player}
+    World_Spawn_Player(World);
+
+    {Generating Items}
+    SetLength(World.Items, 1);
+    World.Items[0] := Make_Gold(3, 3, 69);
+end;
+
+function World_Item_At(World: TWorld; Row, Col: Integer; var Item_Index: Integer): Boolean;
+var
+    Index : Integer;
+begin
+    for Index := Low(World.Items) to High(World.Items) do
+        if (World.Items[Index].Row = Row) and (World.Items[Index].Col = Col) and (World.Items[Index].Kind <> Nothing) then
+        begin
+            Item_Index := Index;
+            Exit(True);
+        end;
+    Exit(False);
+end;
+
 procedure World_Render(World: TWorld);
 var
     Row, Col: Integer;
+    Item_Index: Integer;
 begin
     for Row := 0 to World.Rows - 1 do
     begin
         for Col := 0 to World.Cols - 1 do
             if (Row = World.Player_Row) and (Col = World.Player_Col) then
                 Write('@')
+            else if World_Item_At(World, Row, Col, Item_Index) then
+                Write(Item_To_Char[World.Items[Item_Index].Kind])
             else
                 Write(Cell_To_Char[World_Get(World, Row, Col)]);
         WriteLn();
     end;
+    WriteLn('Gold: ', World.Player_Gold);
 end;
 
 procedure World_Move_Player(var World: TWorld; Dir: TDir);
 var
     New_Row, New_Col: Integer;
+    Item_Index: Integer;
 begin
     New_Row := World.Player_Row + Row_Offset[Dir];
     New_Col := World.Player_Col + Col_Offset[Dir];
@@ -136,9 +174,18 @@ begin
     begin
         World.Player_Row := New_Row;
         World.Player_Col := New_Col;
-    end;
-end;
 
+        if World_Item_At(World, New_Row, New_Col, Item_Index) then
+            with World.Items[Item_Index] do
+                case Kind of
+                    Gold:
+                    begin
+                        Inc(World.Player_Gold, Amount);
+                        Kind := Nothing;
+                    end
+                end
+    end
+end;
 
 const
     ROWS: Integer = 10;
@@ -150,9 +197,7 @@ var
     Commands : String;
     Command : Char;
 begin
-    World := Create_World(ROWS, COLS, Empty);
-    World_Generate(World);
-    World_Spawn_Player(World);
+    World_Generate(World, ROWS, COLS);
 
     World_Render(World);
     while not Quit do
