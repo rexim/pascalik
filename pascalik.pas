@@ -2,8 +2,17 @@
 program Pascalik;
 uses Math;
 
+{$R+}
+
+const
+    Camera_Rows = 10;
+    Camera_Cols = 20;
+
+    World_Rows = 100;
+    World_Cols = 200;
+
 type
-    TCell = (Empty, Floor, VertWall, HorzWall, Door, Passage);
+    TCell = (Empty, Floor, VertWall, HorzWall, Door);
     TDir = (Up, Down, Right, Left);
 
     TItemKind = (Nothing, Gold, Health);
@@ -14,10 +23,9 @@ type
     end;
 
     TWorld = record
-        Rows        : Integer;
-        Cols        : Integer;
-        Cells       : Array of TCell;
-        Items       : Array of TItem;
+        Cells       : array [0..World_Rows-1, 0..World_Cols-1] of TCell;
+        // TODO: Make TWorld.Items a square array of the size of the world
+        Items       : array of TItem;
         Player_Row  : Integer;
         Player_Col  : Integer;
         Player_Gold : Integer;
@@ -25,14 +33,14 @@ type
 
 const
     Item_To_Char: array[TItemKind] of Char = ('?', '*', '&');
-    Cell_To_Char: array[TCell] of Char = (' ', '.', '|', '-', '+', '#');
+    Cell_To_Char: array[TCell] of Char = (' ', '.', '|', '-', '+');
     Row_Offset: array[TDir] of Integer = (-1, 1, 0, 0);
     Col_Offset: array[TDir] of Integer = (0, 0, 1, -1);
-    Walkable: array[TCell] of Boolean = (False, True, False, False, True, True);
+    Walkable: array[TCell] of Boolean = (False, True, False, False, True);
 
     function Modulo(A: Integer; B: Integer): Integer;
     begin
-        Modulo := ((A mod B) + B) mod B;
+        Modulo := A;
     end;
 
     function Make_Gold(Row, Col, Amount: Integer): TItem;
@@ -46,23 +54,13 @@ const
         Make_Gold := Result;
     end;
 
-    function World_Get(World: TWorld; Row, Col: Integer): TCell;
-    begin
-        World_Get := World.Cells[Modulo(Row, World.Rows) * World.Cols + Modulo(Col, World.Cols)];
-    end;
-
-    procedure World_Set(var World: TWorld; Row, Col: Integer; Cell: TCell);
-    begin
-        World.Cells[Modulo(Row, World.Rows) * World.Cols + Modulo(Col, World.Cols)] := Cell;
-    end;
-
     procedure World_Fill_Rect(var World: TWorld; Row1, Col1, Row2, Col2: Integer; Cell: TCell);
     var
         Row, Col : Integer;
     begin
         for Row := Min(Row1, Row2) to Max(Row1, Row2) do
             for Col := Min(Col1, Col2) to Max(Col1, Col2) do
-                World_Set(World, Row, Col, Cell);
+                World.Cells[Row, Col] := Cell;
     end;
 
     procedure World_Place_Room(var World: TWorld; Row, Col, Height, Width: Integer);
@@ -77,24 +75,13 @@ const
         World_Fill_Rect(World, Row + Height - 1, Col, Row + Height - 1, Col + Width - 1, HorzWall);
     end;
 
-    procedure World_Passage_Walk(var World: TWorld; var Row, Col: Integer; Dir: TDir; Len: Integer);
-    var
-        Next_Row, Next_Col : Integer;
-    begin
-        Next_Row := Row + Row_Offset[Dir] * Len;
-        Next_Col := Col + Col_Offset[Dir] * Len;
-        World_Fill_Rect(World, Row, Col, Next_Row, Next_Col, Passage);
-        Row := Next_Row;
-        Col := Next_Col;
-    end;
-
     procedure World_Spawn_Player(var World: TWorld);
     var
         Row, Col: Integer;
     begin
-        for Row := 0 to World.Rows - 1 do
-            for Col := 0 to World.Cols - 1 do
-                if Walkable[World_Get(World, Row, Col)] then
+        for Row := 0 to World_Rows - 1 do
+            for Col := 0 to World_Cols - 1 do
+                if Walkable[World.Cells[Row, Col]] then
                 begin
                     World.Player_Row := Row;
                     World.Player_Col := Col;
@@ -102,25 +89,14 @@ const
                 end;
     end;
 
-    procedure World_Generate(var World: TWorld; Rows, Cols: Integer);
+    procedure World_Generate(var World: TWorld);
     var
         Index, Row, Col: Integer;
     begin
-        {Resizing Cells}
-        World.Rows := Rows;
-        World.Cols := Cols;
-        SetLength(World.Cells, Rows * Cols);
-        for Index := 0 to Rows * Cols - 1 do
-            World.Cells[Index] := Empty;
-
-        {Generating Rooms}
-        Row := 3;
-        Col := 4;
-        for Index := 1 to 1000 do
-            World_Passage_Walk(
-                World, Row, Col,
-                TDir(Random(Ord(High(TDir)) - Ord(Low(TDir)) + 1)),
-                Random(2) + 2);
+        {Clean Cells}
+        for Row := 0 to World_Rows-1 do
+            for Col := 0 to World_Cols-1 do
+                World.Cells[Row, Col] := Empty;
 
         {Spawn Player}
         World_Spawn_Player(World);
@@ -151,8 +127,8 @@ const
     begin
         Cam_Row1 := Max(0, World.Player_Row - Camera_Rows div 2);
         Cam_Col1 := Max(0, World.Player_Col - Camera_Cols div 2);
-        Cam_Row2 := Min(World.Rows - 1, Cam_Row1 + Camera_Rows - 1);
-        Cam_Col2 := Min(World.Cols - 1, Cam_Col1 + Camera_Cols - 1);
+        Cam_Row2 := Min(World_Rows - 1, Cam_Row1 + Camera_Rows - 1);
+        Cam_Col2 := Min(World_Cols - 1, Cam_Col1 + Camera_Cols - 1);
 
         for Row := Cam_Row1 to Cam_Row2 do
         begin
@@ -162,7 +138,7 @@ const
                 else if World_Item_At(World, Row, Col, Item_Index) then
                     Write(Item_To_Char[World.Items[Item_Index].Kind])
                 else
-                    Write(Cell_To_Char[World_Get(World, Row, Col)]);
+                    Write(Cell_To_Char[World.Cells[Row, Col]]);
             WriteLn();
         end;
         WriteLn('Gold: ', World.Player_Gold);
@@ -176,9 +152,9 @@ const
         New_Row := World.Player_Row + Row_Offset[Dir];
         New_Col := World.Player_Col + Col_Offset[Dir];
 
-        if (0 <= New_Row) and (New_Row < World.Rows) then
-            if (0 <= New_Col) and (New_Col < World.Cols) then
-                if Walkable[World_Get(World, New_Row, New_Col)] then
+        if (0 <= New_Row) and (New_Row < World_Rows) then
+            if (0 <= New_Col) and (New_Col < World_Cols) then
+                if Walkable[World.Cells[New_Row, New_Col]] then
                 begin
                     World.Player_Row := New_Row;
                     World.Player_Col := New_Col;
@@ -195,12 +171,6 @@ const
                 end
     end;
 
-const
-    ROWS: Integer = 100;
-    COLS: Integer = 200;
-    CAMERA_ROWS: Integer = 10;
-    CAMERA_COLS: Integer = 20;
-
 var
     World: TWorld;
     Quit: Boolean = False;
@@ -208,7 +178,7 @@ var
     Command : Char;
 begin
     Randomize;
-    World_Generate(World, ROWS, COLS);
+    World_Generate(World);
 
     World_Render(World, CAMERA_ROWS, CAMERA_COLS);
     while not Quit do
