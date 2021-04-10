@@ -12,7 +12,7 @@ const
     World_Cols = 200;
 
     Room_Rows = 5;
-    Room_Cols = 5;
+    Room_Cols = 8;
 
 type
     TCell = (Empty, Floor, VertWall, HorzWall, Door);
@@ -25,13 +25,15 @@ type
     end;
 
     TWorld = record
-        Cells       : array [0..World_Rows-1, 0..World_Cols-1] of TCell;
-        Items       : array [0..World_Rows-1, 0..World_Cols-1] of TItem;
-        Player_Row  : Integer;
-        Player_Col  : Integer;
-        Player_Gold : Integer;
+        Cells         : array [0..World_Rows-1, 0..World_Cols-1] of TCell;
+        Items         : array [0..World_Rows-1, 0..World_Cols-1] of TItem;
+        Player_Row    : Integer;
+        Player_Col    : Integer;
+        Player_Gold   : Integer;
+        {$ifdef DEVBUILD}
+        Player_Noclip : Boolean;
+        {$endif}
     end;
-
 const
     Item_To_Char: array[TItemKind] of Char = ('?', '*', '&');
     Cell_To_Char: array[TCell] of Char = (' ', '.', '|', '-', '+');
@@ -59,16 +61,9 @@ const
                 World.Cells[Row, Col] := Cell;
     end;
 
-    procedure World_Place_Room(var World: TWorld; Row, Col, Height, Width: Integer);
+    procedure World_Flood_Rect(var World: TWorld; Row, Col, Height, Width: Integer; Cell: TCell);
     begin
-        {Floor}
-        World_Fill_Rect(World, Row + 1, Col + 1, Row + Height - 2, Col + Width - 2, Floor);
-
-        {Wall Frame}
-        World_Fill_Rect(World, Row, Col, Row + Height - 1, Col, VertWall);
-        World_Fill_Rect(World, Row, Col + Width - 1, Row + Height - 1, Col + Width - 1, VertWall);
-        World_Fill_Rect(World, Row, Col, Row, Col + Width - 1, HorzWall);
-        World_Fill_Rect(World, Row + Height - 1, Col, Row + Height - 1, Col + Width - 1, HorzWall);
+        World_Fill_Rect(World, Row, Col, Row + Height - 1, Col + Width - 1, Cell);
     end;
 
     procedure World_Spawn_Player(var World: TWorld);
@@ -95,9 +90,19 @@ const
                 World.Cells[Row, Col] := Empty;
 
         {Generate Rooms}
-        World_Place_Room(World, 0,             0, Room_Rows + 2, Room_Cols + 2);
-        World_Place_Room(World, 0, Room_Cols + 1, Room_Rows + 2, Room_Cols + 2);
-        World.Cells[Room_Rows div 2 + 1][Room_Cols + 1] := Door;
+        // TODO: generate walls and doors between the rooms
+        for Row := 0 to 1 do
+            for Col := 0 to 5 do
+            begin
+                World_Flood_Rect(
+                    World,
+                    1 + (Room_Rows + 1) * Row,
+                    1 + (Room_Cols + 1) * Col,
+                    Room_Rows,
+                    Room_Cols,
+                    Floor);
+            end;
+
 
         {Spawn Player}
         World_Spawn_Player(World);
@@ -128,6 +133,9 @@ const
             WriteLn();
         end;
         WriteLn('Gold: ', World.Player_Gold);
+        {$ifdef DEVBUILD}
+        WriteLn('Noclip: ', World.Player_Noclip);
+        {$endif}
     end;
 
     procedure World_Move_Player(var World: TWorld; Dir: TDir);
@@ -139,7 +147,7 @@ const
 
         if (0 <= New_Row) and (New_Row < World_Rows) then
             if (0 <= New_Col) and (New_Col < World_Cols) then
-                if Walkable[World.Cells[New_Row, New_Col]] then
+                if Walkable[World.Cells[New_Row, New_Col]] {$ifdef DEVBUILD}or World.Player_Noclip{$endif} then
                 begin
                     World.Player_Row := New_Row;
                     World.Player_Col := New_Col;
@@ -175,6 +183,9 @@ begin
                's': World_Move_Player(World, Down);
                'a': World_Move_Player(World, Left);
                'd': World_Move_Player(World, Right);
+               {$ifdef DEVBUILD}
+               '{': World.Player_Noclip := not World.Player_Noclip;
+               {$endif}
                'q': Quit := True;
             end;
         World_Render(World, CAMERA_ROWS, CAMERA_COLS);
