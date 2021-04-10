@@ -11,6 +11,9 @@ const
     World_Rows = 100;
     World_Cols = 200;
 
+    Room_Rows = 5;
+    Room_Cols = 5;
+
 type
     TCell = (Empty, Floor, VertWall, HorzWall, Door);
     TDir = (Up, Down, Right, Left);
@@ -91,12 +94,17 @@ const
 
     procedure World_Generate(var World: TWorld);
     var
-        Index, Row, Col: Integer;
+        Row, Col: Integer;
     begin
         {Clean Cells}
         for Row := 0 to World_Rows-1 do
             for Col := 0 to World_Cols-1 do
                 World.Cells[Row, Col] := Empty;
+
+        {Generate Rooms}
+        World_Place_Room(World, 0,             0, Room_Rows + 2, Room_Cols + 2);
+        World_Place_Room(World, 0, Room_Cols + 1, Room_Rows + 2, Room_Cols + 2);
+        World.Cells[Room_Rows div 2 + 1][Room_Cols + 1] := Door;
 
         {Spawn Player}
         World_Spawn_Player(World);
