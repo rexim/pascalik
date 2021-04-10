@@ -20,15 +20,13 @@ type
 
     TItemKind = (Nothing, Gold, Health);
     TItem = record
-        Row, Col : Integer;
         case Kind : TItemKind of
            Gold: (Amount: Integer)
     end;
 
     TWorld = record
         Cells       : array [0..World_Rows-1, 0..World_Cols-1] of TCell;
-        // TODO: Make TWorld.Items a square array of the size of the world
-        Items       : array of TItem;
+        Items       : array [0..World_Rows-1, 0..World_Cols-1] of TItem;
         Player_Row  : Integer;
         Player_Col  : Integer;
         Player_Gold : Integer;
@@ -46,15 +44,10 @@ const
         Modulo := A;
     end;
 
-    function Make_Gold(Row, Col, Amount: Integer): TItem;
-    var
-        Result: TItem;
+    function Make_Gold(Amount: Integer): TItem;
     begin
-        Result.Kind := Gold;
-        Result.Row := Row;
-        Result.Col := Col;
-        Result.Amount := Amount;
-        Make_Gold := Result;
+        Make_Gold.Kind := Gold;
+        Make_Gold.Amount := Amount;
     end;
 
     procedure World_Fill_Rect(var World: TWorld; Row1, Col1, Row2, Col2: Integer; Cell: TCell);
@@ -110,27 +103,12 @@ const
         World_Spawn_Player(World);
 
         {Generating Items}
-        SetLength(World.Items, 1);
-        World.Items[0] := Make_Gold(3, 3, 69);
-    end;
-
-    function World_Item_At(World: TWorld; Row, Col: Integer; var Item_Index: Integer): Boolean;
-    var
-        Index : Integer;
-    begin
-        for Index := Low(World.Items) to High(World.Items) do
-            if (World.Items[Index].Row = Row) and (World.Items[Index].Col = Col) and (World.Items[Index].Kind <> Nothing) then
-            begin
-                Item_Index := Index;
-                Exit(True);
-            end;
-        Exit(False);
+        World.Items[3][3] := Make_Gold(69);
     end;
 
     procedure World_Render(World: TWorld; Camera_Rows, Camera_Cols: Integer);
     var
         Row, Col: Integer;
-        Item_Index: Integer;
         Cam_Row1, Cam_Col1, Cam_Row2, Cam_Col2: Integer;
     begin
         Cam_Row1 := Max(0, World.Player_Row - Camera_Rows div 2);
@@ -143,8 +121,8 @@ const
             for Col := Cam_Col1 to Cam_Col2 do
                 if (Row = World.Player_Row) and (Col = World.Player_Col) then
                     Write('@')
-                else if World_Item_At(World, Row, Col, Item_Index) then
-                    Write(Item_To_Char[World.Items[Item_Index].Kind])
+                else if World.Items[Row][Col].Kind <> Nothing then
+                    Write(Item_To_Char[World.Items[Row][Col].Kind])
                 else
                     Write(Cell_To_Char[World.Cells[Row, Col]]);
             WriteLn();
@@ -155,7 +133,6 @@ const
     procedure World_Move_Player(var World: TWorld; Dir: TDir);
     var
         New_Row, New_Col: Integer;
-        Item_Index: Integer;
     begin
         New_Row := World.Player_Row + Row_Offset[Dir];
         New_Col := World.Player_Col + Col_Offset[Dir];
@@ -167,15 +144,14 @@ const
                     World.Player_Row := New_Row;
                     World.Player_Col := New_Col;
 
-                    if World_Item_At(World, New_Row, New_Col, Item_Index) then
-                        with World.Items[Item_Index] do
-                            case Kind of
-                               Gold:
-                                   begin
-                                       Inc(World.Player_Gold, Amount);
-                                       Kind := Nothing;
-                                   end
-                            end
+                    with World.Items[New_Row][New_Col] do
+                        case Kind of
+                           Gold:
+                               begin
+                                   Inc(World.Player_Gold, Amount);
+                                   Kind := Nothing;
+                               end
+                        end
                 end
     end;
 
