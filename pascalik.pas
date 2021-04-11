@@ -41,11 +41,6 @@ const
     Col_Offset: array[TDir] of Integer = (0, 0, 1, -1);
     Walkable: array[TCell] of Boolean = (False, True, False, False, True);
 
-    function Modulo(A: Integer; B: Integer): Integer;
-    begin
-        Modulo := A;
-    end;
-
     function Make_Gold(Amount: Integer): TItem;
     begin
         Make_Gold.Kind := Gold;
